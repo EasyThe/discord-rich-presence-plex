@@ -41,8 +41,29 @@ def uploadToLitterbox(pngBytes: bytes) -> str:
 		data = { "reqtype": "fileupload", "time": "72h" },
 		files = { "fileToUpload": ("image.png", pngBytes) }
 	)
-	logger.debug("HTTP %d, %s, %s", response.status_code, response.headers, response.text.strip())
-	return response.text.strip()
+
+	logger.debug(
+		"HTTP %d, %s, %s",
+		response.status_code,
+		response.headers,
+		response.text.strip()[:200]
+	)
+
+	if response.status_code != 200:
+		raise Exception(f"Litterbox HTTP {response.status_code}")
+
+	text = response.text.strip()
+
+	# Litterbox success responses are plain text URLs
+	if not text.startswith("http"):
+		raise Exception("Litterbox returned non-URL response")
+
+	# Guard against HTML error pages
+	if "<html" in text.lower():
+		raise Exception("Litterbox returned HTML error page")
+
+	return text
+
 
 class ImgurUploadResponseData(TypedDict):
 	error: str
